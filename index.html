@@ -2,49 +2,23 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8" />
-  <title>Rust Tree Zoom</title>
-
-  <!-- חשוב לניידים: שלא יעשו זום של הדפדפן -->
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-  />
-
+  <title>עץ חלוד</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="scene">
-    <!-- עץ נקי -->
-    <img
-      id="treeClean"
-      class="tree-layer"
-      src="tree_clean.png"
-      alt="Clean olive tree"
-    />
+  <div id="stage">
+    <!-- העץ הנקי -->
+    <img id="treeClean" class="tree-layer" src="tree_clean.png" alt="עץ זית נקי" />
 
-    <!-- חלודה שלב 1 -->
-    <img
-      id="treeRust1"
-      class="tree-layer"
-      src="tree_rust1.png"
-      alt="Rust layer 1"
-    />
+    <!-- חלודה – שכבה 1 -->
+    <img id="treeRust1" class="tree-layer rust-layer" src="tree_rust1.png" alt="חלודה 1" />
 
-    <!-- חלודה שלב 2 -->
-    <img
-      id="treeRust2"
-      class="tree-layer"
-      src="tree_rust2.png"
-      alt="Rust layer 2"
-    />
+    <!-- חלודה – שכבה 2 -->
+    <img id="treeRust2" class="tree-layer rust-layer" src="tree_rust2.png" alt="חלודה 2" />
 
     <!-- חלודה מלאה -->
-    <img
-      id="treeRustFull"
-      class="tree-layer"
-      src="tree_rust_full.png"
-      alt="Full rust"
-    />
+    <img id="treeRustFull" class="tree-layer rust-layer" src="tree_rust_full.png" alt="חלודה מלאה" />
   </div>
 
   <script src="script.js"></script>

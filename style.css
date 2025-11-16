@@ -1,46 +1,53 @@
-/* רקע שחור מלא, בלי גלילה של הדף */
+/* רקע שחור מלא מסך */
 html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
   background: #000;
   overflow: hidden;
+  direction: rtl;
 }
 
-/* משתנים גלובליים לזום ולנקודת המוקד */
-:root {
-  --scale: 1;
-  --originX: 50%;
-  --originY: 50%;
-}
-
-/* מיכל הסצינה */
-#scene {
-  position: fixed;
-  inset: 0;
+/* הבמה של העץ */
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
   background: #000;
   overflow: hidden;
-  touch-action: none; /* שלא יזיז את העמוד אלא יעבור לסקריפט */
+  touch-action: none; /* חשוב לנייד – שלא יגלול את הדף אלא יעבוד הזום */
 }
 
-/* כל שכבות העץ */
+/* כל השכבות של העץ */
 .tree-layer {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(var(--scale));
-  transform-origin: var(--originX) var(--originY);
-  max-height: 90vh; /* שימלא יפה את המסך לגובה */
-  width: auto;
-  pointer-events: none;
+  transform: translate(-50%, -50%) scale(1);
+  transform-origin: center center;
+  max-width: none;
+  height: 90vh;          /* שהעץ ימלא יפה את המסך */
   user-select: none;
-  image-rendering: auto;
+  pointer-events: none; /* שהעכבר יגיע ל-stage, לא לתמונה */
 }
 
-/* שכבות החלודה מתחילות שקופות */
-#treeRust1,
-#treeRust2,
-#treeRustFull {
+/* העץ הנקי תמיד נראה */
+#treeClean {
+  z-index: 1;
+  opacity: 1;
+}
+
+/* שכבות החלודה – בהתחלה מוסתרות */
+.rust-layer {
+  z-index: 2;
   opacity: 0;
-  transition: opacity 0.2s linear;
+  transition: opacity 0.3s linear;
+  /* נתחיל עם מסכה מאוד קטנה – נגדיר אותה בג'אווהסקריפט */
+  clip-path: circle(0% at 50% 50%);
+}
+
+/* כדי שתהיה תאימות רחבה יותר (ספארי) */
+.rust-layer {
+  -webkit-clip-path: circle(0% at 50% 50%);
 }

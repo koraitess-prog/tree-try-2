@@ -1,153 +1,177 @@
-// אלמנטים
-const root = document.documentElement;
-const scene = document.getElementById("scene");
+// -------------------------
+// הגדרות בסיס
+// -------------------------
+const stage = document.getElementById("stage");
 
-const clean = document.getElementById("treeClean");
-const rust1 = document.getElementById("treeRust1");
-const rust2 = document.getElementById("treeRust2");
+const cleanImg = document.getElementById("treeClean");
+const rust1   = document.getElementById("treeRust1");
+const rust2   = document.getElementById("treeRust2");
 const rustFull = document.getElementById("treeRustFull");
 
-// זום
+const layers = [cleanImg, rust1, rust2, rustFull];
+
+let zoom = 1;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 10;
 
-let currentZoom = 1;
-let targetZoom = 1;
+// נקודת הזום – תזוז לפי העכבר / אצבע
+let originX = window.innerWidth / 2;
+let originY = window.innerHeight / 2;
 
-// חלודה (0 = נקי, 1 = אכול לגמרי)
-let rustProgress = 0;
-let targetRust = 0;
-
-// נקודת הזום (באחוזים מהמסך)
-let originX = 50;
-let originY = 50;
+// מרכזים שונים לכל שכבת חלודה – כדי שהתפשטות תבוא מכיוונים שונים
+const centers = {
+  rust1: { x: 15, y: 40 },  // שמאל
+  rust2: { x: 80, y: 20 },  // ימין-למעלה
+  rustFull: { x: 50, y: 80 } // מלמטה
+};
 
 // פונקציות עזר
 function clamp(v, min, max) {
-  return v < min ? min : v > max ? max : v;
+  return Math.max(min, Math.min(max, v));
 }
 
 function smoothstep(edge0, edge1, x) {
+  // מעבר עדין יותר – לא ליניארי
   const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t); // עקומה לא ליניארית
+  return t * t * (3 - 2 * t);
 }
 
-function setOriginFromClientPos(clientX, clientY) {
-  const rect = scene.getBoundingClientRect();
-  originX = ((clientX - rect.left) / rect.width) * 100;
-  originY = ((clientY - rect.top) / rect.height) * 100;
+// עדכון הזום והחלודה
+function updateScene() {
+  // מעדכנים את ה-transform וה-origin לכל השכבות
+  const originStr = `${originX}px ${originY}px`;
+
+  layers.forEach(img => {
+    img.style.transformOrigin = originStr;
+    img.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+  });
+
+  // התקדמות הזום בין 0 ל־1
+  const progress = (zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM);
+  const p = clamp(progress, 0, 1);
+
+  // --- שלב 1 – חלודה מתחילה לאט ---
+  const p1 = smoothstep(0.08, 0.4, p); // תתחיל יחסית מוקדם ותתפשט לאט
+  if (p1 > 0) {
+    const r = 5 + p1 * 120; // רדיוס מעגל
+    rust1.style.opacity = 0.8;
+    rust1.style.clipPath = `circle(${r}% at ${centers.rust1.x}% ${centers.rust1.y}%)`;
+    rust1.style.webkitClipPath = `circle(${r}% at ${centers.rust1.x}% ${centers.rust1.y}%)`;
+  } else {
+    rust1.style.opacity = 0;
+    rust1.style.clipPath = `circle(0% at ${centers.rust1.x}% ${centers.rust1.y}%)`;
+    rust1.style.webkitClipPath = `circle(0% at ${centers.rust1.x}% ${centers.rust1.y}%)`;
+  }
+
+  // --- שלב 2 – שכבת חלודה נוספת מכיוון אחר ---
+  const p2 = smoothstep(0.35, 0.75, p);
+  if (p2 > 0) {
+    const r = 5 + p2 * 130;
+    rust2.style.opacity = 0.85;
+    rust2.style.clipPath = `circle(${r}% at ${centers.rust2.x}% ${centers.rust2.y}%)`;
+    rust2.style.webkitClipPath = `circle(${r}% at ${centers.rust2.x}% ${centers.rust2.y}%)`;
+  } else {
+    rust2.style.opacity = 0;
+    rust2.style.clipPath = `circle(0% at ${centers.rust2.x}% ${centers.rust2.y}%)`;
+    rust2.style.webkitClipPath = `circle(0% at ${centers.rust2.x}% ${centers.rust2.y}%)`;
+  }
+
+  // --- שלב 3 – שכבת חלודה מלאה שסוגרת את הכל לאט ---
+  const p3 = smoothstep(0.7, 1.0, p);
+  if (p3 > 0) {
+    const r = 40 + p3 * 120;
+    rustFull.style.opacity = 0.9 * p3; // שתופיע לאט
+    rustFull.style.clipPath = `circle(${r}% at ${centers.rustFull.x}% ${centers.rustFull.y}%)`;
+    rustFull.style.webkitClipPath = `circle(${r}% at ${centers.rustFull.x}% ${centers.rustFull.y}%)`;
+  } else {
+    rustFull.style.opacity = 0;
+    rustFull.style.clipPath = `circle(0% at ${centers.rustFull.x}% ${centers.rustFull.y}%)`;
+    rustFull.style.webkitClipPath = `circle(0% at ${centers.rustFull.x}% ${centers.rustFull.y}%)`;
+  }
 }
 
-function updateTargetRustFromZoom() {
-  const t = (targetZoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM);
-  targetRust = clamp(t, 0, 1);
+// משנה זום בצורה בטוחה + קורא לעדכון
+function setZoom(newZoom) {
+  zoom = clamp(newZoom, MIN_ZOOM, MAX_ZOOM);
+  updateScene();
 }
 
-// -------------------- זום עם עכבר --------------------
-scene.addEventListener(
-  "wheel",
-  (e) => {
+// -------------------------
+// שליטה בעזרת עכבר – זום עם גלילה
+// -------------------------
+stage.addEventListener("mousemove", (e) => {
+  // נשמור את מיקום העכבר כדי שהזום יהיה סביבו
+  const rect = stage.getBoundingClientRect();
+  originX = e.clientX - rect.left;
+  originY = e.clientY - rect.top;
+});
+
+stage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+
+  const rect = stage.getBoundingClientRect();
+  originX = e.clientX - rect.left;
+  originY = e.clientY - rect.top;
+
+  const zoomStep = 0.12; // זום איטי
+  if (e.deltaY < 0) {
+    setZoom(zoom * (1 + zoomStep));
+  } else {
+    setZoom(zoom * (1 - zoomStep));
+  }
+}, { passive: false });
+
+// -------------------------
+// תמיכה בסלולרי – pinch zoom
+// -------------------------
+let touchStartDistance = null;
+let touchStartZoom = null;
+
+function getTouchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTouchCenter(touches) {
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  };
+}
+
+stage.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) {
+    touchStartDistance = getTouchDistance(e.touches);
+    touchStartZoom = zoom;
+
+    const rect = stage.getBoundingClientRect();
+    const center = getTouchCenter(e.touches);
+    originX = center.x - rect.left;
+    originY = center.y - rect.top;
+  }
+}, { passive: true });
+
+stage.addEventListener("touchmove", (e) => {
+  if (e.touches.length === 2 && touchStartDistance) {
     e.preventDefault();
+    const currentDistance = getTouchDistance(e.touches);
+    const scaleFactor = currentDistance / touchStartDistance;
+    setZoom(touchStartZoom * scaleFactor);
 
-    // גלילה למעלה = זום אין, למטה = זום אאוט
-    const delta = -e.deltaY;
-    const step = delta > 0 ? 0.4 : -0.4;
+    const rect = stage.getBoundingClientRect();
+    const center = getTouchCenter(e.touches);
+    originX = center.x - rect.left;
+    originY = center.y - rect.top;
+  }
+}, { passive: false });
 
-    targetZoom = clamp(targetZoom + step, MIN_ZOOM, MAX_ZOOM);
+stage.addEventListener("touchend", () => {
+  if (event.touches && event.touches.length < 2) {
+    touchStartDistance = null;
+    touchStartZoom = null;
+  }
+});
 
-    // מוקד הזום לפי מיקום העכבר
-    setOriginFromClientPos(e.clientX, e.clientY);
-
-    updateTargetRustFromZoom();
-  },
-  { passive: false }
-);
-
-// -------------------- זום עם פִינְץ' בנייד --------------------
-let pinchStartDistance = null;
-let pinchStartZoom = 1;
-
-scene.addEventListener(
-  "touchstart",
-  (e) => {
-    if (e.touches.length === 2) {
-      pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
-      pinchStartZoom = targetZoom;
-      setOriginFromTouchCenter(e);
-    }
-  },
-  { passive: false }
-);
-
-scene.addEventListener(
-  "touchmove",
-  (e) => {
-    if (e.touches.length === 2 && pinchStartDistance) {
-      e.preventDefault();
-
-      const newDist = getDistance(e.touches[0], e.touches[1]);
-      const factor = newDist / pinchStartDistance;
-
-      targetZoom = clamp(pinchStartZoom * factor, MIN_ZOOM, MAX_ZOOM);
-      setOriginFromTouchCenter(e);
-      updateTargetRustFromZoom();
-    }
-  },
-  { passive: false }
-);
-
-scene.addEventListener(
-  "touchend",
-  (e) => {
-    if (e.touches.length < 2) {
-      pinchStartDistance = null;
-    }
-  },
-  { passive: false }
-);
-
-function getDistance(t1, t2) {
-  const dx = t1.clientX - t2.clientX;
-  const dy = t1.clientY - t2.clientY;
-  return Math.hypot(dx, dy);
-}
-
-function setOriginFromTouchCenter(e) {
-  const rect = scene.getBoundingClientRect();
-  const x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-  const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
-  originX = ((x - rect.left) / rect.width) * 100;
-  originY = ((y - rect.top) / rect.height) * 100;
-}
-
-// -------------------- לולאת אנימציה --------------------
-function animate() {
-  // זום מתקרב בהדרגה ליעד (תנועה חלקה)
-  currentZoom += (targetZoom - currentZoom) * 0.12;
-
-  root.style.setProperty("--scale", currentZoom.toString());
-  root.style.setProperty("--originX", originX + "%");
-  root.style.setProperty("--originY", originY + "%");
-
-  // חלודה – גם מתקרבת לאט ליעד
-  rustProgress += (targetRust - rustProgress) * 0.08;
-
-  const r = rustProgress;
-
-  // כל שכבה נדלקת בטווח אחר של "חלודה"
-  const o1 = smoothstep(0.05, 0.4, r); // שכבה 1
-  const o2 = smoothstep(0.25, 0.7, r); // שכבה 2
-  const o3 = smoothstep(0.6, 1.0, r); // חלודה מלאה
-
-  // קצת "חיים" רכים באמצעות סינוס – לא לגמרי סטטי
-  const time = performance.now() / 1000;
-
-  rust1.style.opacity = clamp(o1 + Math.sin(time * 1.3) * 0.05, 0, 1);
-  rust2.style.opacity = clamp(o2 + Math.sin(time * 1.7 + 1) * 0.05, 0, 1);
-  rustFull.style.opacity = clamp(o3 + Math.sin(time * 2.1 + 2) * 0.05, 0, 1);
-
-  requestAnimationFrame(animate);
-}
-
-animate();
+// הרצת עדכון ראשון
+updateScene();
