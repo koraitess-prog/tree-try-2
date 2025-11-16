@@ -1,68 +1,46 @@
-* {
-  box-sizing: border-box;
-}
-
-html, body {
+/* רקע שחור מלא, בלי גלילה של הדף */
+html,
+body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;            /* רקע שחור מלא */
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  background: #000;
   overflow: hidden;
-  font-family: system-ui, sans-serif;
-  color: #fff;
 }
 
-.wrapper {
-  position: relative;
-  max-width: min(90vw, 90vh);  /* עובד גם בעמיד וגם בשכיבה */
-  max-height: 90vh;
+/* משתנים גלובליים לזום ולנקודת המוקד */
+:root {
+  --scale: 1;
+  --originX: 50%;
+  --originY: 50%;
 }
 
-/* שתי התמונות אחת על השנייה, ממורכזות */
-.tree {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 100%;
-  max-height: 100%;
-  height: auto;
-  display: block;
-}
-.rust {
-  position: absolute;
-  inset: 0;
-  max-height: 85vh;
-  height: auto;
-  opacity: 0;
-  transition: opacity 0.25s linear;
-  pointer-events: none;
-
-  /* מסכת רעש – לרנדומליות */
-  mask-image: url("noise.png");
-  mask-size: 200% 200%;
-  mask-repeat: no-repeat;
-  mask-position: 50% 50%;
-
-  /* תמיכה כרום/מובייל */
-  -webkit-mask-image: url("noise.png");
-  -webkit-mask-size: 200% 200%;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: 50% 50%;
-}
-;
-}
-
-.hint {
+/* מיכל הסצינה */
+#scene {
   position: fixed;
-  bottom: 10px;
+  inset: 0;
+  background: #000;
+  overflow: hidden;
+  touch-action: none; /* שלא יזיז את העמוד אלא יעבור לסקריפט */
+}
+
+/* כל שכבות העץ */
+.tree-layer {
+  position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
-  opacity: 0.5;
-  text-align: center;
+  transform: translate(-50%, -50%) scale(var(--scale));
+  transform-origin: var(--originX) var(--originY);
+  max-height: 90vh; /* שימלא יפה את המסך לגובה */
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+  image-rendering: auto;
+}
+
+/* שכבות החלודה מתחילות שקופות */
+#treeRust1,
+#treeRust2,
+#treeRustFull {
+  opacity: 0;
+  transition: opacity 0.2s linear;
 }

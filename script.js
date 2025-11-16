@@ -1,104 +1,153 @@
-const cleanImg = document.getElementById("treeClean");
-const rustImg  = document.getElementById("treeRust");
+// אלמנטים
+const root = document.documentElement;
+const scene = document.getElementById("scene");
 
-let rustAmount   = 0;    // 0 = נקי, 1 = חלוד לגמרי
-let zoomCenterX  = 0.5;  // איפה העכבר בציר X (0–1)
-let zoomCenterY  = 0.5;  // איפה העכבר בציר Y (0–1)
+const clean = document.getElementById("treeClean");
+const rust1 = document.getElementById("treeRust1");
+const rust2 = document.getElementById("treeRust2");
+const rustFull = document.getElementById("treeRustFull");
 
-function clamp01(x) {
-  return Math.max(0, Math.min(1, x));
+// זום
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 10;
+
+let currentZoom = 1;
+let targetZoom = 1;
+
+// חלודה (0 = נקי, 1 = אכול לגמרי)
+let rustProgress = 0;
+let targetRust = 0;
+
+// נקודת הזום (באחוזים מהמסך)
+let originX = 50;
+let originY = 50;
+
+// פונקציות עזר
+function clamp(v, min, max) {
+  return v < min ? min : v > max ? max : v;
 }
 
-function updateView() {
-  // כמה חלודה
-  rustImg.style.opacity = rustAmount;
-
-  // כמה זום — כאן חיזקתי כדי שיהיה "יותר זום אין"
-  const scale = 1 + rustAmount * 0.6;  // אפשר להגדיל עוד אם תרצי
-
-  // זום לפי מיקום העכבר / האצבע
-  const cx = zoomCenterX - 0.5; // יחסי למרכז (-0.5 עד 0.5)
-  const cy = zoomCenterY - 0.5;
-
-  const move = rustAmount * 140; // כמה להזיז בפיקסלים כשמאוד קרוב
-  const dx = -cx * move;
-  const dy = -cy * move;
-
-  const transform =
-    `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${scale})`;
-
-  cleanImg.style.transform = transform;
-  rustImg.style.transform  = transform;
+function smoothstep(edge0, edge1, x) {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t); // עקומה לא ליניארית
 }
 
-/* ----- מחשב: גלגלת + מיקום עכבר ----- */
+function setOriginFromClientPos(clientX, clientY) {
+  const rect = scene.getBoundingClientRect();
+  originX = ((clientX - rect.left) / rect.width) * 100;
+  originY = ((clientY - rect.top) / rect.height) * 100;
+}
 
-// גלילה – מוסיפה/מורידה חלודה + זום
-window.addEventListener("wheel", (e) => {
-  e.preventDefault();
+function updateTargetRustFromZoom() {
+  const t = (targetZoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM);
+  targetRust = clamp(t, 0, 1);
+}
 
-  if (e.deltaY < 0) {
-    rustAmount += 0.06; // יותר מהיר
-  } else {
-    rustAmount -= 0.06;
-  }
-
-  rustAmount = clamp01(rustAmount);
-  updateView();
-}, { passive: false });
-
-// תזוזת עכבר – משנה את נקודת הזום
-window.addEventListener("mousemove", (e) => {
-  zoomCenterX = e.clientX / window.innerWidth;
-  zoomCenterY = e.clientY / window.innerHeight;
-});
-
-/* ----- נייד: גרירה למעלה/למטה (אצבע אחת) ----- */
-
-let lastTouchY = null;
-
-window.addEventListener("touchstart", (e) => {
-  if (e.touches.length === 1) {
-    lastTouchY = e.touches[0].clientY;
-  }
-}, { passive: false });
-
-window.addEventListener("touchmove", (e) => {
-  if (e.touches.length === 1 && lastTouchY !== null) {
+// -------------------- זום עם עכבר --------------------
+scene.addEventListener(
+  "wheel",
+  (e) => {
     e.preventDefault();
-    const currentY = e.touches[0].clientY;
-    const dy = lastTouchY - currentY;   // גרירה למעלה = חיובי
 
-    const sensitivity = 0.003;          // כמה מהר משתנה החלודה
-    rustAmount += dy * sensitivity;
-    rustAmount = clamp01(rustAmount);
+    // גלילה למעלה = זום אין, למטה = זום אאוט
+    const delta = -e.deltaY;
+    const step = delta > 0 ? 0.4 : -0.4;
 
-    // גם במובייל – מרכז זום לפי אצבע
-    zoomCenterX = e.touches[0].clientX / window.innerWidth;
-    zoomCenterY = e.touches[0].clientY / window.innerHeight;
+    targetZoom = clamp(targetZoom + step, MIN_ZOOM, MAX_ZOOM);
 
-    lastTouchY = currentY;
-    updateView();
-  }
-}, { passive: false });
+    // מוקד הזום לפי מיקום העכבר
+    setOriginFromClientPos(e.clientX, e.clientY);
 
-window.addEventListener("touchend", () => {
-  lastTouchY = null;
-});
+    updateTargetRustFromZoom();
+  },
+  { passive: false }
+);
 
-updateView();
-window.addEventListener("mousemove", (e) => {
-  const bounds = wrapper.getBoundingClientRect();
-  const mouseX = ((e.clientX - bounds.left) / bounds.width) * 100;
-  const mouseY = ((e.clientY - bounds.top) / bounds.height) * 100;
+// -------------------- זום עם פִינְץ' בנייד --------------------
+let pinchStartDistance = null;
+let pinchStartZoom = 1;
 
-  wrapper.style.transformOrigin = `${mouseX}% ${mouseY}%`;
-});
-window.addEventListener("touchmove", (e) => {
-  const touch = e.touches[0];
-  const bounds = wrapper.getBoundingClientRect();
-  const x = ((touch.clientX - bounds.left) / bounds.width) * 100;
-  const y = ((touch.clientY - bounds.top) / bounds.height) * 100;
+scene.addEventListener(
+  "touchstart",
+  (e) => {
+    if (e.touches.length === 2) {
+      pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+      pinchStartZoom = targetZoom;
+      setOriginFromTouchCenter(e);
+    }
+  },
+  { passive: false }
+);
 
-  wrapper.style.transformOrigin = `${x}% ${y}%`;
-});
+scene.addEventListener(
+  "touchmove",
+  (e) => {
+    if (e.touches.length === 2 && pinchStartDistance) {
+      e.preventDefault();
+
+      const newDist = getDistance(e.touches[0], e.touches[1]);
+      const factor = newDist / pinchStartDistance;
+
+      targetZoom = clamp(pinchStartZoom * factor, MIN_ZOOM, MAX_ZOOM);
+      setOriginFromTouchCenter(e);
+      updateTargetRustFromZoom();
+    }
+  },
+  { passive: false }
+);
+
+scene.addEventListener(
+  "touchend",
+  (e) => {
+    if (e.touches.length < 2) {
+      pinchStartDistance = null;
+    }
+  },
+  { passive: false }
+);
+
+function getDistance(t1, t2) {
+  const dx = t1.clientX - t2.clientX;
+  const dy = t1.clientY - t2.clientY;
+  return Math.hypot(dx, dy);
+}
+
+function setOriginFromTouchCenter(e) {
+  const rect = scene.getBoundingClientRect();
+  const x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+  const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+  originX = ((x - rect.left) / rect.width) * 100;
+  originY = ((y - rect.top) / rect.height) * 100;
+}
+
+// -------------------- לולאת אנימציה --------------------
+function animate() {
+  // זום מתקרב בהדרגה ליעד (תנועה חלקה)
+  currentZoom += (targetZoom - currentZoom) * 0.12;
+
+  root.style.setProperty("--scale", currentZoom.toString());
+  root.style.setProperty("--originX", originX + "%");
+  root.style.setProperty("--originY", originY + "%");
+
+  // חלודה – גם מתקרבת לאט ליעד
+  rustProgress += (targetRust - rustProgress) * 0.08;
+
+  const r = rustProgress;
+
+  // כל שכבה נדלקת בטווח אחר של "חלודה"
+  const o1 = smoothstep(0.05, 0.4, r); // שכבה 1
+  const o2 = smoothstep(0.25, 0.7, r); // שכבה 2
+  const o3 = smoothstep(0.6, 1.0, r); // חלודה מלאה
+
+  // קצת "חיים" רכים באמצעות סינוס – לא לגמרי סטטי
+  const time = performance.now() / 1000;
+
+  rust1.style.opacity = clamp(o1 + Math.sin(time * 1.3) * 0.05, 0, 1);
+  rust2.style.opacity = clamp(o2 + Math.sin(time * 1.7 + 1) * 0.05, 0, 1);
+  rustFull.style.opacity = clamp(o3 + Math.sin(time * 2.1 + 2) * 0.05, 0, 1);
+
+  requestAnimationFrame(animate);
+}
+
+animate();

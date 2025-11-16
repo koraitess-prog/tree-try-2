@@ -1,101 +1,52 @@
 <!DOCTYPE html>
 <html lang="he">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Rust Tree Zoom</title>
 
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      width: 100%;
-      background: #000; /* רקע שחור מוחלט */
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: system-ui, sans-serif;
-    }
+  <!-- חשוב לניידים: שלא יעשו זום של הדפדפן -->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
 
-    .wrapper {
-      position: relative;
-      width: min(80vw, 80vh);  /* כדי שיתאים גם למסך רחב וגם לגבוה */
-      height: min(80vw, 80vh);
-    }
-
-    .tree {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%) scale(1);
-      max-width: 100%;
-      max-height: 100%;
-      height: auto;
-      display: block;
-    }
-
-    .rust {
-      opacity: 0;
-      transition: opacity 0.25s ease-out;
-      pointer-events: none;
-    }
-
-    .debug {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      font-size: 12px;
-      color: #fff;
-      opacity: 0.6;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-
-  <div class="wrapper">
+  <div id="scene">
     <!-- עץ נקי -->
-    <img src="tree_clean.png" class="tree" id="treeClean" alt="עץ נקי">
+    <img
+      id="treeClean"
+      class="tree-layer"
+      src="tree_clean.png"
+      alt="Clean olive tree"
+    />
 
-    <!-- עץ חלוד מעליו -->
-    <img src="tree_rust.png" class="tree rust" id="treeRust" alt="עץ חלוד">
+    <!-- חלודה שלב 1 -->
+    <img
+      id="treeRust1"
+      class="tree-layer"
+      src="tree_rust1.png"
+      alt="Rust layer 1"
+    />
+
+    <!-- חלודה שלב 2 -->
+    <img
+      id="treeRust2"
+      class="tree-layer"
+      src="tree_rust2.png"
+      alt="Rust layer 2"
+    />
+
+    <!-- חלודה מלאה -->
+    <img
+      id="treeRustFull"
+      class="tree-layer"
+      src="tree_rust_full.png"
+      alt="Full rust"
+    />
   </div>
 
-  <div class="debug">
-    גלגלי עם הגלגלת: למעלה = יותר חלודה, למטה = פחות.
-  </div>
-
-  <script>
-    const cleanImg = document.getElementById("treeClean");
-    const rustImg  = document.getElementById("treeRust");
-
-    let rustAmount = 0;   // 0 = נקי, 1 = חלוד לגמרי
-
-    window.addEventListener("wheel", (event) => {
-      // גלילה למעלה = יותר חלודה, למטה = פחות
-      if (event.deltaY < 0) {
-        rustAmount += 0.02;   // צעד איטי ורך יותר
-      } else {
-        rustAmount -= 0.02;
-      }
-
-      // לשמור ערך בין 0 ל־1
-      rustAmount = Math.max(0, Math.min(1, rustAmount));
-
-      // עקומה עדינה – מתחיל לאט, מתגבר בהמשך
-      const eased = rustAmount * rustAmount;
-
-      // כמה החלודה נחשפת
-      rustImg.style.opacity = eased;
-
-      // זום עדין – בלי שהעץ יהפוך לעמבה מטושטשת
-      const scale = 1 + eased * 0.2;
-      const baseTransform = `translate(-50%, -50%) scale(${scale})`;
-
-      cleanImg.style.transform = baseTransform;
-      rustImg.style.transform  = baseTransform;
-    });
-  </script>
-
+  <script src="script.js"></script>
 </body>
 </html>
